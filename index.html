@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Equity Research Engine — FCFF Edition</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500&display=swap');
+  :root {
+    --bg:#07090f; --surface:#0e1220; --border:#1c2438;
+    --gold:#c8a84b; --gold-dim:#7a6030;
+    --text:#e6dcc8; --muted:#4a5470;
+    --green:#2db87a; --red:#d94f4f;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:50px 50px;opacity:.3;pointer-events:none;z-index:0;}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 1.5rem;position:relative;z-index:1;}
+  header{padding:2.5rem 0 2rem;text-align:center;border-bottom:1px solid var(--border);margin-bottom:2rem;}
+  .badge{display:inline-flex;align-items:center;gap:8px;background:rgba(200,168,75,.12);border:1px solid rgba(200,168,75,.3);border-radius:4px;padding:5px 14px;margin-bottom:1rem;}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--gold);animation:pulse 2s infinite;}
+  .badge span{color:var(--gold);font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.15em;}
+  h1{font-family:'Playfair Display',serif;font-size:2.4rem;font-weight:400;letter-spacing:-.02em;margin-bottom:.4rem;}
+  .subtitle{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.08em;}
+  .tabs{display:flex;gap:2px;margin-bottom:1.5rem;border-bottom:1px solid var(--border);}
+  .tab{background:none;border:none;cursor:pointer;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;padding:10px 18px;letter-spacing:.1em;border-bottom:2px solid transparent;transition:all .15s;}
+  .tab:hover{color:var(--text);}
+  .tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+  .panel{display:none;} .panel.active{display:block;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.4rem;margin-bottom:1rem;}
+  .ct{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--gold);letter-spacing:.15em;margin-bottom:.5rem;padding-bottom:10px;border-bottom:1px solid var(--border);}
+  .cs{color:var(--muted);font-size:10px;margin-left:8px;font-family:'Inter',sans-serif;letter-spacing:0;}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+  .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;}
+  .g5{display:grid;grid-template-columns:repeat(5,1fr);gap:.75rem;}
+  @media(max-width:700px){.g2,.g3,.g5{grid-template-columns:1fr;}}
+  .field{margin-bottom:.9rem;}
+  .field label{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.1em;margin-bottom:5px;}
+  .field input,.field select{width:100%;background:#090c14;border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;outline:none;transition:border-color .15s;}
+  .field input:focus{border-color:var(--gold-dim);}
+  .hint{font-size:10px;color:var(--muted);margin-top:4px;font-family:'Inter',sans-serif;}
+  .sl{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--gold);letter-spacing:.15em;margin:1.2rem 0 .75rem;padding-bottom:6px;border-bottom:1px solid var(--border);}
+  .btn{width:100%;padding:14px;background:var(--gold);border:none;border-radius:8px;color:var(--bg);font-family:'Playfair Display',serif;font-size:1rem;font-weight:600;cursor:pointer;letter-spacing:.05em;transition:opacity .2s;margin-top:1rem;}
+  .btn:hover{opacity:.88;}
+  .btn2{padding:8px 16px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;transition:all .15s;}
+  .btn2:hover{border-color:var(--gold-dim);color:var(--text);}
+  .metric{background:#090c14;border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem;}
+  .ml{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.1em;margin-bottom:6px;}
+  .mv{font-family:'JetBrains Mono',monospace;font-size:1.25rem;font-weight:600;}
+  .ms{font-size:10px;color:var(--muted);margin-top:3px;}
+  table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:12px;}
+  th{color:var(--muted);font-weight:400;padding:7px 8px;text-align:right;font-size:10px;letter-spacing:.06em;border-bottom:1px solid var(--border);}
+  th:first-child{text-align:left;}
+  td{padding:7px 8px;text-align:right;border-bottom:1px solid #0a0d14;}
+  td:first-child{text-align:left;color:var(--muted);}
+  tr:hover td{background:rgba(255,255,255,.015);}
+  .sens td{padding:8px 14px;text-align:center;}
+  .sens th{text-align:center;padding:8px 14px;background:#090c14;font-size:10px;}
+  .score-wrap{margin-bottom:12px;}
+  .score-hd{display:flex;justify-content:space-between;margin-bottom:5px;}
+  .score-lbl{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
+  .score-val{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;}
+  .track{height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+  .fill{height:100%;border-radius:2px;}
+  .info{background:rgba(74,144,217,.08);border:1px solid rgba(74,144,217,.2);border-radius:8px;padding:1rem;font-size:12px;color:#7ab3e0;line-height:1.6;margin-bottom:1rem;}
+  .formula-box{background:#090c14;border-radius:8px;padding:1rem 1.2rem;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:.75rem;line-height:1.8;}
+  .formula-box span{color:var(--gold);}
+  .verdict-box{border-radius:12px;padding:2rem;text-align:center;margin-bottom:1rem;}
+  .vl{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;margin-bottom:.5rem;}
+  .vt{font-family:'Playfair Display',serif;font-size:2.5rem;font-weight:600;}
+  .vs{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:.5rem;}
+  .thesis{border-left:3px solid;border-radius:0 8px 8px 0;padding:1rem 1.2rem;margin-bottom:1rem;}
+  .tl{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;margin-bottom:8px;}
+  .tt{font-size:.92rem;line-height:1.75;color:#ccc;}
+  .li{display:flex;gap:10px;margin-bottom:8px;}
+  .lic{font-family:'JetBrains Mono',monospace;font-size:12px;margin-top:2px;}
+  .lit{font-size:.88rem;line-height:1.55;color:#ccc;}
+  footer{border-top:1px solid var(--border);padding:1.5rem 0;margin-top:2rem;display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;color:#2a3048;flex-wrap:wrap;gap:8px;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="badge"><span class="dot"></span><span>EQUITY RESEARCH ENGINE · FCFF EDITION · v3.0</span></div>
+    <h1>Fundamental Valuation</h1>
+    <p class="subtitle">FCFF · WACC · ROIC Growth · EV→Equity Bridge · DuPont · Sensitivity · 100% Free</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('input')">INPUT DATA</button>
+    <button class="tab" onclick="showTab('dcf')">DCF MODEL</button>
+    <button class="tab" onclick="showTab('dupont')">DUPONT</button>
+    <button class="tab" onclick="showTab('sensitivity')">SENSITIVITY</button>
+    <button class="tab" onclick="showTab('verdict')">VERDICT</button>
+  </div>
+
+  <!-- INPUT -->
+  <div id="input-panel" class="panel active">
+    <div class="info">
+      ℹ Open the company's Annual Report → find Income Statement, Balance Sheet, Cash Flow Statement → enter figures below in <strong>actual currency units</strong> (not thousands/millions). All calculations run locally — no data leaves your browser.
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="ct">COMPANY INFORMATION</div>
+        <div class="field"><label>COMPANY NAME</label><input id="company" placeholder="e.g. Infosys Limited"/></div>
+        <div class="field"><label>TICKER</label><input id="ticker" placeholder="e.g. INFY"/></div>
+        <div class="field"><label>SECTOR</label>
+          <select id="sector">
+            <option value="tech">Technology</option>
+            <option value="finance">Banking / Finance</option>
+            <option value="consumer">Consumer / FMCG</option>
+            <option value="healthcare">Healthcare / Pharma</option>
+            <option value="energy">Energy / Oil & Gas</option>
+            <option value="utilities">Utilities</option>
+            <option value="industrial">Industrial / Manufacturing</option>
+            <option value="telecom">Telecom</option>
+            <option value="realestate">Real Estate</option>
+          </select>
+        </div>
+        <div class="field"><label>CURRENCY</label>
+          <select id="currency">
+            <option value="₹">Indian Rupee (₹)</option>
+            <option value="$">US Dollar ($)</option>
+            <option value="£">British Pound (£)</option>
+            <option value="€">Euro (€)</option>
+          </select>
+        </div>
+        <div class="field"><label>CURRENT SHARE PRICE</label><input id="price" type="number" placeholder="e.g. 1850"/></div>
+        <div class="field"><label>SHARES OUTSTANDING</label><input id="shares" type="number" placeholder="e.g. 4150000000"/><div class="hint">Total shares — on cover page of annual report</div></div>
+      </div>
+
+      <div class="card">
+        <div class="ct">INCOME STATEMENT <span class="cs">Latest fiscal year</span></div>
+        <div class="field"><label>REVENUE / NET SALES</label><input id="revenue" type="number" placeholder="e.g. 1467350000000"/></div>
+        <div class="field"><label>EBIT (Operating Profit before interest & tax)</label><input id="ebit" type="number" placeholder="e.g. 285000000000"/></div>
+        <div class="field"><label>INTEREST EXPENSE</label><input id="interest" type="number" placeholder="e.g. 12000000000"/></div>
+        <div class="field"><label>NET INCOME / PAT</label><input id="net_income" type="number" placeholder="e.g. 240000000000"/></div>
+        <div class="field"><label>EFFECTIVE TAX RATE (%)</label><input id="tax_rate" type="number" placeholder="e.g. 25"/><div class="hint">Found in the tax notes of P&L statement</div></div>
+        <div class="field"><label>DEPRECIATION & AMORTIZATION (D&A)</label><input id="da" type="number" placeholder="e.g. 45000000000"/></div>
+      </div>
+    </div>
+
+    <div class="g2">
+      <div class="card">
+        <div class="ct">BALANCE SHEET <span class="cs">End of fiscal year</span></div>
+        <div class="field"><label>TOTAL ASSETS</label><input id="total_assets" type="number" placeholder="e.g. 890000000000"/></div>
+        <div class="field"><label>TOTAL DEBT (Short-term + Long-term)</label><input id="total_debt" type="number" placeholder="e.g. 180000000000"/></div>
+        <div class="field"><label>TOTAL EQUITY / NET WORTH / SHAREHOLDERS' FUNDS</label><input id="total_equity" type="number" placeholder="e.g. 520000000000"/></div>
+        <div class="field"><label>CASH & CASH EQUIVALENTS</label><input id="cash" type="number" placeholder="e.g. 95000000000"/></div>
+      </div>
+
+      <div class="card">
+        <div class="ct">CASH FLOW & DCF ASSUMPTIONS</div>
+        <div class="field"><label>CAPITAL EXPENDITURE (CapEx)</label><input id="capex" type="number" placeholder="e.g. 35000000000"/><div class="hint">Usually "Purchase of fixed assets / PPE" in Cash Flow</div></div>
+        <div class="field"><label>CHANGE IN WORKING CAPITAL (ΔWC)</label><input id="dwc" type="number" placeholder="e.g. 8000000000"/><div class="hint">Positive = WC increased = cash outflow. Negative = WC decreased.</div></div>
+        <div class="sl">CAPM / WACC INPUTS</div>
+        <div class="field"><label>BETA</label><input id="beta" type="number" placeholder="e.g. 1.1"/><div class="hint">From screener.in · Tech≈1.2, FMCG≈0.85, Bank≈1.1, Pharma≈0.9, Util≈0.5</div></div>
+        <div class="field"><label>RISK-FREE RATE (%)</label><input id="rf" type="number" placeholder="e.g. 7.0"/><div class="hint">10-yr Govt bond yield — India ≈ 7%, US ≈ 4.5%</div></div>
+        <div class="field"><label>EQUITY RISK PREMIUM (%)</label><input id="erp" type="number" placeholder="e.g. 5.5"/><div class="hint">India ≈ 7%, US ≈ 5.5%, Developed ≈ 5%</div></div>
+        <div class="field"><label>TERMINAL GROWTH RATE (%)</label><input id="tgr" type="number" placeholder="e.g. 3.0"/><div class="hint">Conservative: 2–4%. Must be less than WACC.</div></div>
+      </div>
+    </div>
+
+    <button class="btn" onclick="calculate()">CALCULATE FULL VALUATION →</button>
+    <p style="text-align:center;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:.75rem;">
+      FCFF = EBIT(1−T) + D&A − CapEx − ΔWC · Discounted at WACC · EV → Equity Bridge · 100% local computation
+    </p>
+  </div>
+
+  <!-- DCF PANEL -->
+  <div id="dcf-panel" class="panel">
+    <div class="g5" style="margin-bottom:1rem;" id="kpi-strip"></div>
+    <div class="g2">
+      <div class="card">
+        <div class="ct">FCFF DCF MODEL <span class="cs">Free Cash Flow to Firm</span></div>
+        <div id="dcf-assump" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1rem;"></div>
+        <div class="formula-box" id="fcff-formula"></div>
+        <table>
+          <thead><tr><th>Year</th><th>FCFF</th><th>Growth</th><th>PV (WACC)</th></tr></thead>
+          <tbody id="dcf-tbody"></tbody>
+        </table>
+        <div id="dcf-bridge" style="margin-top:8px;"></div>
+      </div>
+      <div class="card">
+        <div class="ct">FCFF PROJECTION CHART</div>
+        <canvas id="fcfe-chart" style="width:100%;height:220px;"></canvas>
+        <div class="ct" style="margin-top:1.2rem;">TRADING MULTIPLES</div>
+        <table id="multiples-table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- DUPONT PANEL -->
+  <div id="dupont-panel" class="panel">
+    <div class="g2">
+      <div class="card">
+        <div class="ct">DUPONT DECOMPOSITION <span class="cs">Display only — ROE computed directly</span></div>
+        <div id="dupont-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem;"></div>
+        <div class="formula-box" id="dupont-formula"></div>
+        <div class="ct" style="margin-top:1.2rem;">ROIC ANALYSIS</div>
+        <div id="roic-box" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:.5rem;"></div>
+      </div>
+      <div class="card">
+        <div class="ct">QUALITY SCORECARD</div>
+        <div id="quality-scores"></div>
+        <div class="ct" style="margin-top:1.2rem;">RISK METRICS</div>
+        <div id="risk-metrics" style="margin-top:.5rem;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SENSITIVITY PANEL -->
+  <div id="sensitivity-panel" class="panel">
+    <div class="card">
+      <div class="ct">SENSITIVITY ANALYSIS — INTRINSIC VALUE PER SHARE <span class="cs">Full FCFF chain recomputed per cell</span></div>
+      <p style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;margin-bottom:1rem;">Rows = WACC · Columns = Terminal Growth Rate · Each cell: TV→EV→Equity→Price</p>
+      <div style="overflow-x:auto;"><table class="sens" id="sens-table"></table></div>
+      <div id="sens-legend" style="display:flex;gap:20px;margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:11px;flex-wrap:wrap;"></div>
+    </div>
+  </div>
+
+  <!-- VERDICT PANEL -->
+  <div id="verdict-panel" class="panel">
+    <div id="verdict-box"></div>
+    <div id="thesis-box"></div>
+    <div class="g2">
+      <div class="card">
+        <div class="ct" style="color:var(--green);">UPSIDE CATALYSTS</div>
+        <div id="catalysts-list"></div>
+      </div>
+      <div class="card">
+        <div class="ct" style="color:var(--red);">KEY RISKS</div>
+        <div id="risks-list"></div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:1rem;">
+      <button class="btn2" onclick="window.print()">⎙ Print / Save as PDF</button>
+      <button class="btn2" onclick="showTab('input')" style="margin-left:8px;">↩ Edit Inputs</button>
+    </div>
+  </div>
+
+  <footer>
+    <span>Equity Research Engine · FCFF Edition · Formula-based · No API · No cost</span>
+    <span>Not financial advice · Educational purposes only</span>
+  </footer>
+</div>
+
+<script>
+// ─── Globals ──────────────────────────────────────────────────────────────────
+let CUR = '₹';
+
+const SECTOR = {
+  tech:       {beta:1.2,  ev_ebitda:22, pe:28, pb:5.5},
+  finance:    {beta:1.1,  ev_ebitda:14, pe:18, pb:2.2},
+  consumer:   {beta:0.85, ev_ebitda:18, pe:35, pb:7.0},
+  healthcare: {beta:0.9,  ev_ebitda:20, pe:30, pb:4.5},
+  energy:     {beta:1.05, ev_ebitda:10, pe:12, pb:1.8},
+  utilities:  {beta:0.5,  ev_ebitda:12, pe:16, pb:2.0},
+  industrial: {beta:1.0,  ev_ebitda:14, pe:20, pb:3.0},
+  telecom:    {beta:0.8,  ev_ebitda:8,  pe:14, pb:1.5},
+  realestate: {beta:0.75, ev_ebitda:18, pe:25, pb:2.5},
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function v(id){return parseFloat(document.getElementById(id)?.value)||0;}
+function s(id){return document.getElementById(id)?.value||'';}
+function fmt(n,d=1){
+  if(n==null||isNaN(n))return'N/A';
+  const a=Math.abs(n),sg=n<0?'-':'';
+  if(a>=1e12)return sg+(a/1e12).toFixed(d)+'T';
+  if(a>=1e9) return sg+(a/1e9).toFixed(d)+'B';
+  if(a>=1e6) return sg+(a/1e6).toFixed(d)+'M';
+  if(a>=1e3) return sg+(a/1e3).toFixed(d)+'K';
+  return n.toFixed(d);
+}
+function curr(n){if(n==null||isNaN(n))return'N/A';return(n<0?'-'+CUR:CUR)+fmt(Math.abs(n));}
+function pct(n,d=1){return isNaN(n)?'N/A':n.toFixed(d)+'%';}
+function xv(n,d=2){return isNaN(n)?'N/A':n.toFixed(d)+'×';}
+
+function showTab(t){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById(t+'-panel').classList.add('active');
+  document.querySelector(`[onclick="showTab('${t}')"]`).classList.add('active');
+}
+
+// ─── Core valuation engine (pure FCFF) ───────────────────────────────────────
+function computeIntrinsic(wacc, tgr, fcff_base, fcff_proj, debt, cash, shares) {
+  // Discount each projected FCFF at WACC
+  const pv_fcff = fcff_proj.map((f,i) => f / Math.pow(1+wacc, i+1));
+  const sum_pv  = pv_fcff.reduce((a,b)=>a+b, 0);
+
+  // Terminal value (Gordon Growth, FCFF basis, discounted at WACC)
+  const tv      = fcff_proj[4] * (1 + tgr) / (wacc - tgr);
+  const pv_tv   = tv / Math.pow(1 + wacc, 5);
+
+  // EV = sum of PV(FCFF) + PV(TV)
+  const ev      = sum_pv + pv_tv;
+
+  // Equity Value = EV − Debt + Cash  (bridge)
+  const eq_val  = ev - debt + cash;
+
+  // Intrinsic per share
+  const intrinsic = eq_val / shares;
+
+  return {pv_fcff, sum_pv, tv, pv_tv, ev, eq_val, intrinsic};
+}
+
+// ─── Main Calculate ───────────────────────────────────────────────────────────
+function calculate(){
+  const company = s('company')||'Company';
+  const ticker  = s('ticker');
+  const sector  = s('sector');
+  CUR           = s('currency');
+  const sd      = SECTOR[sector];
+
+  const price   = v('price');
+  const shares  = v('shares');
+  const revenue = v('revenue');
+  const ebit    = v('ebit');
+  const interest= v('interest');
+  const net_inc = v('net_income');
+  const t       = v('tax_rate')/100;
+  const da      = v('da');
+  const capex   = v('capex');
+  const dwc     = v('dwc');
+  const t_asset = v('total_assets');
+  const t_debt  = v('total_debt');
+  const t_equity= v('total_equity');
+  const cash    = v('cash');
+  const beta    = v('beta')||sd.beta;
+  const rf      = v('rf')/100;
+  const erp     = v('erp')/100;
+  const tgr     = v('tgr')/100;
+
+  if(!price||!shares||!revenue||!ebit){
+    alert('Please fill in at least: Share Price, Shares Outstanding, Revenue, and EBIT.');
+    return;
+  }
+
+  // 1. FCFF = EBIT(1−T) + D&A − CapEx − ΔWC
+  const nopat    = ebit * (1 - t);
+  const fcff_base = nopat + da - capex - dwc;
+
+  // 2. WACC — market value weights
+  const ke = rf + beta * erp;                           // Cost of equity (CAPM)
+  const kd = t_debt > 0 ? (interest/t_debt)*(1-t) : 0.04*(1-t); // After-tax cost of debt
+  const E  = price * shares;                            // Market cap
+  const D  = t_debt;
+  const V  = E + D;
+  const wacc = (ke * E/V) + (kd * D/V);
+
+  // Safety check: WACC must be positive
+  if(!wacc || wacc <= 0){
+    alert('WACC is zero or negative. Please check Risk-Free Rate, Beta, and ERP inputs.');
+    return;
+  }
+
+  // Safety check: WACC must be positive
+  if(!wacc || wacc <= 0){
+    alert('WACC computed as zero or negative. Please enter valid Risk-Free Rate, ERP, and Beta.');
+    return;
+  }
+
+  // Safety check: tgr must be < wacc
+  if(tgr >= wacc){
+    alert(`Terminal growth rate (${pct(tgr*100)}) must be less than WACC (${pct(wacc*100)}). Please reduce terminal growth.`);
+    return;
+  }
+
+  // 3. ROIC-based sustainable growth
+  const capital_employed = t_equity + t_debt - cash;
+  const roic = capital_employed > 0 ? nopat / capital_employed : 0.12;
+  const reinvest_rate = nopat > 0 ? (capex - da + dwc) / nopat : 0.3;
+  const g_sustainable = roic * reinvest_rate;
+
+  // Fade growth from sustainable → terminal over 5 years
+  const growth_rates = Array.from({length:5},(_,i)=>{
+    const w = i/4;
+    return g_sustainable*(1-w) + tgr*w;
+  });
+
+  // 4. Project FCFF
+  const fcff_proj = [];
+  let prev = fcff_base;
+  growth_rates.forEach(g=>{
+    const f = prev*(1+g);
+    fcff_proj.push(f);
+    prev = f;
+  });
+
+  // 5. Discount + Terminal + EV → Equity bridge
+  const {pv_fcff, sum_pv, tv, pv_tv, ev, eq_val, intrinsic} = computeIntrinsic(wacc, tgr, fcff_base, fcff_proj, D, cash, shares);
+
+  const upside = ((intrinsic - price)/price)*100;
+  const mos    = ((intrinsic - price)/intrinsic)*100;
+
+  // 6. Multiples
+  const mkt_cap   = E;
+  const ebitda    = ebit + da;
+  const ev_ebitda = ebitda>0 ? ev/ebitda : null;
+  const pe        = net_inc>0 ? mkt_cap/net_inc : null;
+  const pb        = t_equity>0 ? mkt_cap/t_equity : null;
+  const ps        = revenue>0  ? mkt_cap/revenue : null;
+
+  // 7. DuPont (for display — ROE computed directly)
+  const roe_direct  = net_inc/t_equity*100;
+  const net_margin  = net_inc/revenue*100;
+  const asset_turn  = revenue/t_asset;
+  const eq_mult     = t_asset/t_equity;
+  const roa         = net_inc/t_asset*100;
+  const roic_pct    = roic*100;
+
+  // 8. Quality scores
+  const int_cov  = interest>0 ? ebit/interest : 10;
+  const de_ratio = t_equity>0 ? t_debt/t_equity : 0;
+  const q1 = clamp(net_margin>20?9:net_margin>10?7:net_margin>5?5:3);
+  const q2 = clamp(int_cov>5?9:int_cov>3?7:int_cov>1.5?5:2);
+  const q3 = clamp(roic_pct>20?9:roic_pct>15?7:roic_pct>10?5:3);
+  const q4 = clamp(upside>30?9:upside>10?7:upside>-10?5:2);
+  const q5 = clamp(de_ratio<0.3?9:de_ratio<0.7?7:de_ratio<1.5?5:2);
+
+  // 9. Verdict
+  let verdict, confidence;
+  if(upside>25)      {verdict='UNDERVALUED';  confidence=upside>40?'HIGH':'MEDIUM';}
+  else if(upside<-15){verdict='OVERVALUED';   confidence=upside<-30?'HIGH':'MEDIUM';}
+  else               {verdict='FAIRLY VALUED';confidence='MEDIUM';}
+  const vc = verdict==='UNDERVALUED'?'#2db87a':verdict==='OVERVALUED'?'#d94f4f':'#c8a84b';
+
+  // 10. Sensitivity — full chain per cell
+  const wacc_range   = [-0.02,-0.01,0,0.01,0.02].map(d=>wacc+d);
+  const growth_range = [-0.01,-0.005,0,0.005,0.01].map(d=>tgr+d);
+  const sens_matrix  = wacc_range.map(w=>
+    growth_range.map(g=>{
+      if(g>=w) return 0;
+      const r = computeIntrinsic(w, g, fcff_base, fcff_proj, D, cash, shares);
+      return r.intrinsic;
+    })
+  );
+
+  // 11. Catalysts & risks
+  const catalysts=[], risks=[];
+  if(net_margin>15) catalysts.push(`Strong profitability — ${pct(net_margin)} net margin provides earnings resilience`);
+  if(roic_pct>15)   catalysts.push(`High ROIC of ${pct(roic_pct)} significantly exceeds WACC of ${pct(wacc*100)}, creating economic value`);
+  if(upside>20)     catalysts.push(`DCF intrinsic value of ${curr(intrinsic)} implies ${pct(upside)} upside to current price`);
+  if(int_cov>5)     catalysts.push(`Comfortable interest coverage of ${xv(int_cov)} reflects a fortress balance sheet`);
+  if(de_ratio<0.4)  catalysts.push(`Low debt-to-equity of ${xv(de_ratio)} provides financial flexibility for reinvestment`);
+  if(catalysts.length<3) catalysts.push('Operating leverage potential as fixed costs are spread over a growing revenue base');
+
+  if(de_ratio>1.5)      risks.push(`High leverage (D/E: ${xv(de_ratio)}) amplifies downside risk in rising rate environments`);
+  if(pe&&pe>sd.pe*1.3)  risks.push(`Premium P/E of ${xv(pe)} vs sector average ${xv(sd.pe)} leaves limited margin for error`);
+  if(net_margin<8)      risks.push(`Thin net margin of ${pct(net_margin)} exposes earnings to cost or pricing pressures`);
+  if(roic_pct<wacc*100) risks.push(`ROIC (${pct(roic_pct)}) below WACC (${pct(wacc*100)}) — company is destroying economic value`);
+  risks.push('Macro headwinds (inflation, rate hikes) could compress multiples and raise discount rates');
+  risks.push('Execution risk if management fails to sustain historical reinvestment returns');
+
+  const thesis = `${company} trades at ${CUR}${price} vs. DCF intrinsic value of ${curr(intrinsic)}, implying ${upside>0?'a '+pct(upside)+' upside':'a '+pct(Math.abs(upside))+' downside'} using a WACC of ${pct(wacc*100,2)} and ${pct(tgr*100)} terminal growth. FCFF of ${curr(fcff_base)} was projected at ${pct(g_sustainable*100)} initial sustainable growth (ROIC ${pct(roic_pct)} × ${pct(reinvest_rate*100)} reinvestment rate), fading to terminal. The EV–Debt+Cash bridge yields an equity value of ${curr(eq_val)}, or ${curr(intrinsic)} per share. ${verdict==='UNDERVALUED'?'At current levels the stock offers a meaningful margin of safety for patient investors.':verdict==='OVERVALUED'?'Current pricing appears to fully reflect optimistic growth scenarios.':'The stock appears fairly priced relative to fundamentals at current levels.'}`;
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  renderKPI(price, intrinsic, upside, wacc, mkt_cap, ev);
+  renderDCF(fcff_base, fcff_proj, growth_rates, pv_fcff, sum_pv, pv_tv, tv, ev, eq_val, intrinsic, wacc, ke, kd, tgr, nopat, da, capex, dwc, D, cash, shares);
+  renderChart(fcff_proj, pv_fcff);
+  renderMultiples(ev_ebitda, pe, pb, ps, sd);
+  renderDuPont(net_margin, asset_turn, eq_mult, roe_direct, roa, roic_pct, reinvest_rate*100, g_sustainable*100);
+  renderROIC(roic_pct, wacc*100, capital_employed, nopat);
+  renderQuality(q1,q2,q3,q4,q5);
+  renderRisk(int_cov, de_ratio, t_debt-cash);
+  renderSensitivity(sens_matrix, wacc_range, growth_range, price);
+  renderVerdict(verdict, vc, confidence, intrinsic, price, upside, company, ticker);
+  renderThesis(thesis, vc);
+  renderLists(catalysts, risks);
+
+  showTab('dcf');
+}
+
+function clamp(n){return Math.min(10,Math.max(1,n));}
+
+// ─── Render helpers ───────────────────────────────────────────────────────────
+function renderKPI(price, intrinsic, upside, wacc, mktcap, ev){
+  const items=[
+    {l:'MARKET PRICE',   v:CUR+price.toLocaleString(), s:'Current'},
+    {l:'INTRINSIC VALUE',v:isNaN(intrinsic)?'N/A':CUR+intrinsic.toFixed(2), s:'DCF / FCFF'},
+    {l:'UPSIDE / DOWN',  v:(upside>0?'+':'')+pct(upside), s:'vs Intrinsic', c:upside>0?'#2db87a':'#d94f4f'},
+    {l:'WACC',           v:pct(wacc*100,2), s:'Discount Rate'},
+    {l:'ENTERPRISE VALUE',v:fmt(ev), s:CUR},
+  ];
+  document.getElementById('kpi-strip').innerHTML=items.map(m=>`
+    <div class="metric">
+      <div class="ml">${m.l}</div>
+      <div class="mv" style="color:${m.c||'var(--text)'}">${m.v}</div>
+      <div class="ms">${m.s}</div>
+    </div>`).join('');
+}
+
+function renderDCF(fcff_base, proj, growth, pv_fcff, sum_pv, pv_tv, tv, ev, eq_val, intrinsic, wacc, ke, kd, tgr, nopat, da, capex, dwc, debt, cash, shares){
+  const assump=document.getElementById('dcf-assump');
+  assump.innerHTML=[
+    {l:'Ke (Cost of Equity)', v:pct(ke*100,2)},
+    {l:'Kd (After-tax)',      v:pct(kd*100,2)},
+    {l:'Terminal Growth',     v:pct(tgr*100,1)},
+  ].map(m=>`<div style="background:#090c14;border-radius:6px;padding:8px 10px">
+    <div style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;margin-bottom:4px">${m.l.toUpperCase()}</div>
+    <div style="color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600">${m.v}</div>
+  </div>`).join('');
+
+  document.getElementById('fcff-formula').innerHTML=`
+    <span style="color:var(--text)">FCFF</span> = EBIT×(1−T) + D&A − CapEx − ΔWC
+    <br>= ${curr(nopat)} + ${curr(da)} − ${curr(capex)} − ${curr(dwc)}
+    <br>= <span>${curr(fcff_base)}</span>`;
+
+  const tbody=document.getElementById('dcf-tbody');
+  tbody.innerHTML=proj.map((f,i)=>`<tr>
+    <td>Y${i+1}</td>
+    <td style="color:var(--text)">${curr(f)}</td>
+    <td style="color:var(--gold)">${pct(growth[i]*100)}</td>
+    <td style="color:var(--green)">${curr(pv_fcff[i])}</td>
+  </tr>`).join('');
+
+  document.getElementById('dcf-bridge').innerHTML=`
+    <table><tbody>
+      <tr style="border-top:1px solid var(--border)">
+        <td>Σ PV (FCFF Y1–Y5)</td><td style="color:var(--text)">${curr(sum_pv)}</td>
+      </tr>
+      <tr>
+        <td>Terminal Value (TV)</td><td style="color:var(--muted)">${curr(tv)}</td>
+      </tr>
+      <tr>
+        <td>PV of Terminal Value</td><td style="color:var(--text)">${curr(pv_tv)}</td>
+      </tr>
+      <tr style="border-top:1px solid var(--border)">
+        <td style="color:var(--gold)">Enterprise Value (EV)</td><td style="color:var(--gold);font-weight:600">${curr(ev)}</td>
+      </tr>
+      <tr>
+        <td>− Total Debt</td><td style="color:#d94f4f">−${curr(debt)}</td>
+      </tr>
+      <tr>
+        <td>+ Cash</td><td style="color:#2db87a">+${curr(cash)}</td>
+      </tr>
+      <tr style="background:rgba(200,168,75,.08)">
+        <td style="color:var(--gold);font-weight:600">Equity Value</td><td style="color:var(--gold);font-weight:600">${curr(eq_val)}</td>
+      </tr>
+      <tr style="background:rgba(200,168,75,.14)">
+        <td style="color:var(--gold);font-weight:700">Intrinsic / Share</td>
+        <td style="color:var(--gold);font-weight:700;font-size:15px">${CUR}${isNaN(intrinsic)?'N/A':intrinsic.toFixed(2)}</td>
+      </tr>
+    </tbody></table>`;
+}
+
+function renderChart(proj, pv){
+  const canvas=document.getElementById('fcfe-chart');
+  canvas.width=canvas.offsetWidth||420; canvas.height=220;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  const pad={t:20,r:20,b:40,l:65};
+  const cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
+  const all=[...proj,...pv];
+  const maxV=Math.max(...all)*1.15;
+  const minV=Math.min(0,...all)*1.1;
+  const range=maxV-minV||1;
+  const bw=cw/(proj.length*2+proj.length-1);
+  ctx.clearRect(0,0,W,H);
+  for(let i=0;i<=4;i++){
+    const y=pad.t+ch-(i/4)*ch;
+    ctx.strokeStyle='#1c2438';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();
+    ctx.fillStyle='#4a5470';ctx.font='9px JetBrains Mono';ctx.textAlign='right';
+    ctx.fillText(fmt(minV+range*i/4),pad.l-4,y+3);
+  }
+  proj.forEach((f,i)=>{
+    const x=pad.l+i*(bw*2+bw);
+    const yBase=pad.t+ch-((0-minV)/range)*ch;
+    const yF=pad.t+ch-((f-minV)/range)*ch;
+    ctx.fillStyle='#c8a84b';
+    ctx.fillRect(x,Math.min(yF,yBase),bw,Math.abs(yBase-yF));
+    const yP=pad.t+ch-((pv[i]-minV)/range)*ch;
+    ctx.fillStyle='#2a3a5a';
+    ctx.fillRect(x+bw,Math.min(yP,yBase),bw,Math.abs(yBase-yP));
+    ctx.fillStyle='#4a5470';ctx.font='9px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('Y'+(i+1),x+bw,H-8);
+  });
+  ctx.fillStyle='#c8a84b';ctx.fillRect(pad.l,H-28,10,8);
+  ctx.fillStyle='#4a5470';ctx.font='9px JetBrains Mono';ctx.textAlign='left';
+  ctx.fillText('FCFF',pad.l+14,H-20);
+  ctx.fillStyle='#2a3a5a';ctx.fillRect(pad.l+60,H-28,10,8);
+  ctx.fillText('PV',pad.l+74,H-20);
+}
+
+function renderMultiples(ev_ebitda,pe,pb,ps,sd){
+  document.getElementById('multiples-table').innerHTML=
+    `<thead><tr><th style="text-align:left">Multiple</th><th>Company</th><th>Sector Avg</th><th>Signal</th></tr></thead><tbody>`+
+    [{l:'EV/EBITDA',v:ev_ebitda,s:sd.ev_ebitda},{l:'P/E',v:pe,s:sd.pe},{l:'P/B',v:pb,s:sd.pb},{l:'P/S',v:ps,s:null}]
+    .map(r=>{
+      const rich=r.s&&r.v&&r.v>r.s*1.1;
+      const cheap=r.s&&r.v&&r.v<r.s*0.9;
+      const sig=!r.s?'—':rich?'<span style="color:#d94f4f">RICH</span>':cheap?'<span style="color:#2db87a">CHEAP</span>':'<span style="color:#c8a84b">FAIR</span>';
+      return `<tr>
+        <td>${r.l}</td>
+        <td style="color:${rich?'#d94f4f':cheap?'#2db87a':'var(--text)'}">${r.v?xv(r.v):'N/A'}</td>
+        <td style="color:var(--muted)">${r.s?xv(r.s):'—'}</td>
+        <td>${sig}</td>
+      </tr>`;
+    }).join('')+`</tbody>`;
+}
+
+function renderDuPont(nm,at,em,roe,roa,roic,rr,gs){
+  const grid=document.getElementById('dupont-grid');
+  grid.innerHTML=[
+    {l:'Net Profit Margin',  v:pct(nm),   d:'Net Income / Revenue',     gold:false},
+    {l:'Asset Turnover',     v:xv(at),    d:'Revenue / Total Assets',   gold:false},
+    {l:'Equity Multiplier',  v:xv(em),    d:'Total Assets / Equity',    gold:false},
+    {l:'ROA',                v:pct(roa),  d:'Net Income / Total Assets',gold:false},
+    {l:'ROE (Direct)',        v:pct(roe),  d:'Net Income / Total Equity',gold:true},
+    {l:'DuPont ROE Check',   v:pct(nm*at*em),             d:'Margin × AT × EM (display)',gold:false},
+  ].map(m=>`
+    <div style="background:${m.gold?'rgba(200,168,75,.1)':'#090c14'};border:1px solid ${m.gold?'rgba(200,168,75,.3)':'var(--border)'};border-radius:8px;padding:.8rem">
+      <div style="color:${m.gold?'var(--gold)':'var(--muted)'};font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;margin-bottom:4px">${m.l.toUpperCase()}</div>
+      <div style="color:${m.gold?'var(--gold)':'var(--text)'};font-family:'JetBrains Mono',monospace;font-size:${m.gold?'1.4rem':'1.1rem'};font-weight:600">${m.v}</div>
+      <div style="color:#1f2a40;font-size:9px;margin-top:2px">${m.d}</div>
+    </div>`).join('');
+
+  document.getElementById('dupont-formula').innerHTML=
+    `ROE = ${pct(nm)} × ${xv(at)} × ${xv(em)} = <span>${pct(nm*at*em)}</span>
+     &nbsp;|&nbsp; ROE (Direct) = <span>${pct(roe)}</span>`;
+}
+
+function renderROIC(roic,wacc,cap_emp,nopat){
+  const spread=roic-wacc;
+  const color=spread>0?'#2db87a':'#d94f4f';
+  document.getElementById('roic-box').innerHTML=[
+    {l:'ROIC',            v:pct(roic),   d:'EBIT(1−T) / Capital Employed'},
+    {l:'WACC',            v:pct(wacc),   d:'Hurdle rate'},
+    {l:'Value Spread',    v:(spread>0?'+':'')+pct(spread), d:'ROIC − WACC', c:color},
+    {l:'Capital Employed',v:fmt(cap_emp),d:'Equity + Debt − Cash'},
+  ].map(m=>`
+    <div style="background:#090c14;border:1px solid var(--border);border-radius:8px;padding:.8rem">
+      <div style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;margin-bottom:4px">${m.l.toUpperCase()}</div>
+      <div style="color:${m.c||'var(--text)'};font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:600">${m.v}</div>
+      <div style="color:#1f2a40;font-size:9px;margin-top:2px">${m.d}</div>
+    </div>`).join('');
+}
+
+function renderQuality(q1,q2,q3,q4,q5){
+  document.getElementById('quality-scores').innerHTML=
+    [{l:'Earnings Quality',q:q1},{l:'Balance Sheet Strength',q:q2},{l:'Capital Efficiency (ROIC)',q:q3},{l:'Valuation Attractiveness',q:q4},{l:'Leverage Safety',q:q5}]
+    .map(s=>{
+      const c=s.q>=7?'#2db87a':s.q>=5?'#c8a84b':'#d94f4f';
+      return `<div class="score-wrap">
+        <div class="score-hd"><span class="score-lbl">${s.l}</span><span class="score-val" style="color:${c}">${s.q}/10</span></div>
+        <div class="track"><div class="fill" style="width:${s.q*10}%;background:${c}"></div></div>
+      </div>`;
+    }).join('');
+}
+
+function renderRisk(ic,de,net_debt){
+  document.getElementById('risk-metrics').innerHTML=
+    [{l:'Interest Coverage',v:xv(ic),warn:ic<3},{l:'Debt / Equity',v:xv(de),warn:de>1.5},{l:'Net Debt',v:curr(net_debt),warn:net_debt>0}]
+    .map(r=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:12px">
+      <span style="color:var(--muted)">${r.l}</span>
+      <span style="color:${r.warn?'#d94f4f':'#2db87a'};font-weight:600">${r.v}</span>
+    </div>`).join('');
+}
+
+function renderSensitivity(matrix,waccRange,growthRange,price){
+  let html=`<thead><tr><th>WACC ↓ / g →</th>${growthRange.map(g=>`<th>${pct(g*100,1)}</th>`).join('')}</tr></thead><tbody>`;
+  matrix.forEach((row,wi)=>{
+    html+=`<tr><th>${pct(waccRange[wi]*100,1)}</th>`;
+    row.forEach(val=>{
+      if(val<=0){html+=`<td style="color:var(--muted)">N/A</td>`;return;}
+      const diff=val-price;
+      const intensity=Math.min(.45,Math.abs(diff)/price);
+      const bg=diff>0?`rgba(45,184,122,${intensity})`:`rgba(217,79,79,${intensity})`;
+      const tc=diff>0?'#86efac':'#fca5a5';
+      html+=`<td style="background:${bg};color:${tc};font-weight:${Math.abs(diff)>price*.1?600:400}">${CUR}${val.toFixed(0)}</td>`;
+    });
+    html+=`</tr>`;
+  });
+  document.getElementById('sens-table').innerHTML=html+`</tbody>`;
+  document.getElementById('sens-legend').innerHTML=`
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:rgba(45,184,122,.4);border-radius:2px;display:inline-block"></span><span style="color:var(--muted)">Above ${CUR}${price} (upside)</span></span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:rgba(217,79,79,.4);border-radius:2px;display:inline-block"></span><span style="color:var(--muted)">Below ${CUR}${price} (downside)</span></span>
+    <span style="color:var(--muted);margin-left:auto;font-size:10px">Each cell recomputes: TV → EV → Equity → Price</span>`;
+}
+
+function renderVerdict(verdict,vc,confidence,intrinsic,price,upside,company,ticker){
+  document.getElementById('verdict-box').innerHTML=`
+    <div class="verdict-box" style="background:${vc}12;border:1.5px solid ${vc}44">
+      <div class="vl" style="color:${vc}">FINAL VERDICT — ${company}${ticker?' ('+ticker+')':''}</div>
+      <div class="vt" style="color:${vc}">${verdict}</div>
+      <div class="vs">Confidence: ${confidence} &nbsp;·&nbsp; Intrinsic: ${CUR}${isNaN(intrinsic)?'N/A':intrinsic.toFixed(2)} &nbsp;·&nbsp; ${upside>0?'▲ '+pct(upside)+' upside':'▼ '+pct(Math.abs(upside))+' downside'} from ${CUR}${price}</div>
+    </div>`;
+}
+
+function renderThesis(thesis,vc){
+  document.getElementById('thesis-box').innerHTML=`
+    <div class="thesis" style="background:${vc}0d;border-color:${vc}">
+      <div class="tl" style="color:${vc}">INVESTMENT THESIS</div>
+      <div class="tt">${thesis}</div>
+    </div>`;
+}
+
+function renderLists(catalysts,risks){
+  document.getElementById('catalysts-list').innerHTML=catalysts.map(c=>`<div class="li"><span class="lic" style="color:var(--green)">+</span><span class="lit">${c}</span></div>`).join('');
+  document.getElementById('risks-list').innerHTML=risks.map(r=>`<div class="li"><span class="lic" style="color:var(--red)">−</span><span class="lit">${r}</span></div>`).join('');
+}
+</script>
+</body>
+</html>
