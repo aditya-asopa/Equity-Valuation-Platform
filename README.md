@@ -1,4 +1,4 @@
-# 📈 Equity Research Engine — FCFF Edition
+# 📈 Equity Research Platform - FCFF Edition
 
 > A fully offline, formula-driven stock valuation tool. No API. No backend. No cost.
 
