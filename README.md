@@ -44,7 +44,7 @@ git clone https://github.com/aditya-asopa/Equity-Valuation-Platform.git
 open index.html
 ```
 
-Or just (download the HTML file) [ttps://github.com/aditya-asopa/Equity-Valuation-Platform/blob/main/index.html] and double-click it. That's literally it.
+Or just [download the HTML file](https://github.com/aditya-asopa/Equity-Valuation-Platform/blob/main/index.html) and double-click it. That's literally it.
 
 ---
 
