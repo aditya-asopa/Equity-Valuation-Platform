@@ -44,7 +44,7 @@ git clone https://github.com/your-username/equity-research-engine.git
 open index.html
 ```
 
-Or just download the HTML file and double-click it. That's literally it.
+Or just download the HTML file [https://github.com/aditya-asopa/Equity-Valuation-Platform/blob/main/index.html](Url) and double-click it. That's literally it.
 
 ---
 
